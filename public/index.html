@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>🌱 성장곡선</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#2d6a4f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <h1>🌱 성장곡선</h1>
+    <p class="subtitle">WHO 성장 기준표 기반 쌍둥이 성장 차트</p>
+  </header>
+
+  <!-- 탭 네비게이션 -->
+  <nav class="tabs" id="babyTabs">
+    <button class="tab active" data-tab="a">👶 아둥이</button>
+    <button class="tab" data-tab="b">👶 바둥이</button>
+    <button class="tab" data-tab="compare">⚖️ 비교</button>
+  </nav>
+
+  <!-- 메트릭 서브탭 -->
+  <nav class="subtabs" id="metricTabs">
+    <button class="subtab active" data-metric="weight">체중</button>
+    <button class="subtab" data-metric="length">신장</button>
+    <button class="subtab" data-metric="headCirc">두위</button>
+  </nav>
+
+  <!-- 차트 영역 -->
+  <div class="chart-container">
+    <canvas id="growthChart"></canvas>
+  </div>
+
+  <!-- 알림 배지 -->
+  <div id="alerts" class="alerts"></div>
+
+  <!-- 현재 상태 카드 -->
+  <div id="statusCards" class="status-cards"></div>
+
+  <!-- 교정 월령 토글 -->
+  <div class="option-bar">
+    <label class="toggle-label">
+      <input type="checkbox" id="correctedAge"> 교정 월령 사용
+      <span class="toggle-hint">(조산아 보정)</span>
+    </label>
+    <button class="btn-icon" id="btnPrint" title="인쇄">🖨️</button>
+    <button class="btn-icon" id="btnImport" title="둥이로그에서 가져오기">📥</button>
+  </div>
+
+  <!-- 데이터 입력 -->
+  <div class="input-section">
+    <h2>📝 기록 추가</h2>
+    <form id="addForm">
+      <div class="form-row">
+        <div class="form-group">
+          <label>아기</label>
+          <select id="inputBaby">
+            <option value="a">아둥이</option>
+            <option value="b">바둥이</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>날짜</label>
+          <input type="date" id="inputDate">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>체중 (kg)</label>
+          <input type="number" id="inputWeight" step="0.01" min="0" max="30" placeholder="3.50">
+        </div>
+        <div class="form-group">
+          <label>신장 (cm)</label>
+          <input type="number" id="inputHeight" step="0.1" min="0" max="120" placeholder="50.0">
+        </div>
+        <div class="form-group">
+          <label>두위 (cm)</label>
+          <input type="number" id="inputHeadCirc" step="0.1" min="0" max="60" placeholder="35.0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>메모</label>
+          <input type="text" id="inputNote" placeholder="검진 기록 등">
+        </div>
+      </div>
+      <button type="submit" class="btn-primary">추가</button>
+    </form>
+  </div>
+
+  <!-- 기록 목록 -->
+  <div class="records-section">
+    <h2>📋 기록 내역</h2>
+    <div id="recordsList" class="records-list"></div>
+  </div>
+
+  <!-- 설정 -->
+  <details class="settings-section">
+    <summary>⚙️ 아기 설정</summary>
+    <div class="settings-grid" id="settingsGrid"></div>
+  </details>
+
+  <footer>
+    <p>WHO Child Growth Standards 기반 · 의료 진단 대체 불가</p>
+  </footer>
+
+  <script src="/js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+</html>
