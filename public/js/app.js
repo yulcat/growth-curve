@@ -73,7 +73,20 @@ function setupOptions() {
     renderAll();
   });
 
-  document.getElementById('btnPrint').addEventListener('click', () => window.print());
+  document.getElementById('btnPrint').addEventListener('click', () => {
+    // 인쇄용 헤더 생성
+    let header = document.querySelector('.print-header');
+    if (!header) {
+      header = document.createElement('div');
+      header.className = 'print-header';
+      document.querySelector('.chart-container').before(header);
+    }
+    const metricName = { weight: '체중', length: '신장', headCirc: '두위' }[currentMetric];
+    const babyName = currentTab === 'compare' ? '쌍둥이 비교' : appData.babies[currentTab].name;
+    const today = new Date().toLocaleDateString('ko-KR');
+    header.textContent = `🌱 ${babyName} 성장곡선 — ${metricName} (${today})`;
+    window.print();
+  });
 
   document.getElementById('btnImport').addEventListener('click', async () => {
     try {
@@ -249,6 +262,16 @@ function renderChart() {
     addBabyDataset(datasets, currentTab);
   }
 
+  // x축 범위 자동 조절: 데이터가 있으면 최대 월령 + 3, 없으면 12
+  let xMax = 12;
+  for (const ds of datasets) {
+    if (ds.label && !ds.label.startsWith('P')) {
+      for (const pt of ds.data) {
+        if (pt.x > xMax - 3) xMax = Math.min(24, Math.ceil(pt.x / 3) * 3 + 3);
+      }
+    }
+  }
+
   chart = new Chart(canvas, {
     type: 'scatter',
     data: { datasets },
@@ -286,15 +309,15 @@ function renderChart() {
           },
           filter: (item) => item.dataset.label && !item.dataset.label.startsWith('P')
         },
-        annotation: { annotations: getPercentileAnnotations() },
+        annotation: { annotations: getPercentileAnnotations(xMax) },
       },
       scales: {
         x: {
           type: 'linear',
           min: 0,
-          max: 24,
+          max: xMax,
           title: { display: true, text: useCorrected ? '교정 월령' : '월령', font: { size: 11 } },
-          ticks: { stepSize: 2, callback: (v) => `${v}` },
+          ticks: { stepSize: xMax <= 6 ? 1 : 2, callback: (v) => `${v}` },
           grid: { color: 'rgba(0,0,0,0.04)' }
         },
         y: {
@@ -311,10 +334,10 @@ function renderChart() {
   });
 }
 
-function getPercentileAnnotations() {
+function getPercentileAnnotations(xMax = 24) {
   const sex = currentTab === 'compare' ? 'boy' : (appData.babies[currentTab]?.sex || 'boy');
   const data = WHO[sex === 'boy' ? 'boys' : 'girls'][currentMetric];
-  const last = data.find(d => d.month === 24);
+  const last = data.find(d => d.month === xMax) || data.find(d => d.month === 24);
   if (!last) return {};
 
   const pcts = [
@@ -327,7 +350,7 @@ function getPercentileAnnotations() {
   pcts.forEach(p => {
     annotations[p.key] = {
       type: 'label',
-      xValue: 24.3,
+      xValue: xMax + 0.3,
       yValue: last[p.key],
       content: p.label,
       color: p.color,
@@ -410,10 +433,11 @@ function addBabyDataset(datasets, babyId) {
 
   const points = records
     .filter(r => r[field] != null)
-    .map(r => ({
-      x: Math.round(calcMonths(baby.birthDate, r.date, baby.dueDate, useCorrected) * 10) / 10,
-      y: r[field]
-    }));
+    .map(r => {
+      const months = calcMonths(baby.birthDate, r.date, baby.dueDate, useCorrected);
+      return { x: Math.round(months * 10) / 10, y: r[field] };
+    })
+    .filter(p => p.x >= 0); // 출산 전 기록은 차트에서 제외 (음수 월령)
 
   datasets.push({
     label: baby.name,
